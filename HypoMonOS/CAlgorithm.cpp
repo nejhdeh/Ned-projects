@@ -338,7 +338,7 @@ bool CAlgorithm::detectHypoOne()
 ***************************************************************************/
 bool CAlgorithm::detectHypoTwo()
 {
- /*   char writeStr[100] = {""};
+    char writeStr[100] = {""};
     double outFuzzyHR[2] = {0,0};
     double outFuzzyQT[2] = {0,0};
     double outFuzzySI[2] = {0,0};
@@ -411,7 +411,7 @@ bool CAlgorithm::detectHypoTwo()
     //now write results to the file
     fwrite(writeStr,SINGLE_BYTE, strlen(writeStr),pOutputFd);
 
-    fclose(pOutputFd);     */
+    fclose(pOutputFd);     
 
     return true;
 }
