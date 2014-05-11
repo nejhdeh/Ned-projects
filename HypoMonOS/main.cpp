@@ -1,8 +1,8 @@
 /***************************************************************************
     File:           main.cpp  -  description
-    Created:        Fri Jun  7 13:20:20 EST 2002
+    Created:        Mon Apr  2 13:20:20 EST 2012
     Author:         Nejhdeh Ghevondian
-    copyright:      (C) AiMedics Pty Ltd
+    copyright:      (C) 2012 AiMedics Pty Ltd
     Email:          nejhdeh@AiMedics.com
     Description:    This is the main entry point for the HypoMonOS system.
                     It is the only function not to be associated with any

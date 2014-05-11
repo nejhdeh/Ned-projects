@@ -1,0 +1,340 @@
+%-- help for custom database get_Data(studySessionID, dataType).m---
+%
+% VERSION 5
+%
+%Function provides you with an interface to the BGL Data
+%
+%The function will return a double array that has one row per sample
+%
+%Column 1           Column 2    
+%Cycle Time       Field
+%
+% Function:
+%   get_Data(inputData, dataType);
+%   inputData can be in two formats
+%       1. studySessionID   - a number or array of numbers that represents the study session(s) that you wish to view data for
+%       2. cell_Array       - one row from the cell array obtained from the function get_Sessions
+%   dataType      - a string that identifies the type of variable(s) you want
+% Field type for HYPOMON Data are
+% 
+%     'HR'
+%     'HRO'
+%     'TotalRxPackets'
+%     'MissedRxPackets'
+%     'TotalTxPackets'    
+%     'MissedTxPackets'    
+%     'CurrentRssi'
+%     'RR'
+%     'RPeak'
+%     'QT'
+%     'TPeak'
+%     'ZRaRl'
+%     'ZLaRl'
+%     'eBatteryVoltage'
+%     'BoxTemp'
+%     'X'
+%     'Y'
+%     'Z'
+%     'HR_Flags'
+%     'XYZ_Flags'
+%     'ECG'
+%     'DropOutComms'
+%     'DropOutSensor'
+%     'DropOutDataProcBitmask'
+%     'HypoAlarmBGL'
+%
+%         
+% Field type for CLINIC DATA are
+%     
+%     'BGL'
+%     'YSI'
+%     'YSI1'
+%     'YSI2'
+%     'IPRO2'
+%     'BGM'
+%     'VERIO'
+%     'BGLInSession'
+%         
+% Field type for CLINIC DATA are
+%     'Calibration'
+%     'Exercise'
+%     'Insulin'
+%     'Meal'
+%     'RecentHypo'
+%     'Treatment'
+%     'PatientCondition'
+%     'StudyStart'
+%     'LightOutTime'
+%     'StudyDate'
+%     'DateOfDiagnosis'
+%     'DateOfBirth'    
+%     'HbA1c'
+%     'PreDinnerBGL'
+%     'Gender'
+%     'Height'
+%     'Weight'
+%     'Regime'
+%     'Allergies'
+%     'HypoScore'
+%     'BGL1and2'
+%     'ALL_Calibration_BGL'
+%     'HypoAlarmBGL'
+%     'QueryInsulinVal'
+%     'QueryFoodVal'
+%     'BolusFlag'
+%     'StudyID'
+%     'PatientIndex'
+%     'VisitNumber'
+%     'StudySessionIDs'
+%     'SleepState' => Time, X, Y, Z, W
+%     'ChestSize'
+%       
+% Field type for CLINIC DATA are
+%     'MaxCycle'
+%
+% Field type for ALGORTIHM DATA are
+%       if the dataType contains "Alg" in the first three characters 
+%       e.g input string 'Alg 1 HRT' gives real time algorithm 1 heart rate trend difference,
+%       use same syntax for HRV, HRVF,Alarm,Num
+
+% ***New Fields Required***
+
+% HypoAlarmBGL
+% InSessionRecalBGL
+% SysPerformanceResultSignal
+% SysPerformanceResultBelt
+% SysPerformanceResultBatt
+% HypoMonOverallRevisionNumber
+% QueryInsulinVal - done
+% QueryFoodVal - done
+% All HypoMon BG calibration in a single output, change BG1and2 to HypoMonCalibration
+% NotificationData, convert bitwise implimentation to a [0 0 0] output matrix for signal batt and comms flags
+
+
+function[data] = get_Data(inputData, dataType)
+
+%a value to tell us if the cached data has been initialised
+persistent inti;
+persistent settings;
+%Cached data
+persistent cached_HR;
+persistent cached_HRO;
+persistent cached_TotalRxPackets;
+persistent cached_MissedRxPackets;
+persistent cached_TotalTxPackets;
+persistent cached_MissedTxPackets;
+persistent cached_CurrentRssi;
+persistent cached_RR;
+persistent cached_RPeak;
+persistent cached_QT;
+persistent cached_TPeak;
+persistent cached_ZRaRl;
+persistent cached_ZLaRl;
+persistent cached_eBatteryVoltage;
+persistent cached_BoxTemp;
+persistent cached_X;
+persistent cached_Y;
+persistent cached_Z;
+persistent cached_HR_Flags;
+persistent cached_XYZ_Flags;
+persistent cached_ECG;
+persistent cached_DropOutComms;
+persistent cached_DropOutSensor;
+persistent cached_DropOutDataProcBitmask;
+%Cached Indexes
+persistent cached_HR_Index;
+persistent cached_HRO_Index;
+persistent cached_TotalRxPackets_Index;
+persistent cached_MissedRxPackets_Index;
+persistent cached_TotalTxPackets_Index;
+persistent cached_MissedTxPackets_Index;
+persistent cached_CurrentRssi_Index;
+persistent cached_RR_Index;
+persistent cached_RPeak_Index;
+persistent cached_QT_Index;
+persistent cached_TPeak_Index;
+persistent cached_ZRaRl_Index;
+persistent cached_ZLaRl_Index;
+persistent cached_eBatteryVoltage_Index;
+persistent cached_BoxTemp_Index;
+persistent cached_X_Index;
+persistent cached_Y_Index;
+persistent cached_Z_Index;
+persistent cached_HR_Flags_Index;
+persistent cached_XYZ_Flags_Index;
+persistent cached_ECG_Index;
+persistent cached_DropOutComms_Index;
+persistent cached_DropOutSensor_Index;
+persistent cached_DropOutDataProcBitmask_Index;
+
+
+
+firstNow = now; %Timestamp the time the function starts running
+warning off; %turn off all warnings
+%Setup cacheing
+if inti ~= 1 %first time the function has been called
+    inti = 1;
+    mlock;  %Ensure the cache isnt cleared
+    
+    %fill with default values
+    settings = 1;  %1 = 
+end
+
+%Clear the cached data.
+if strcmp(dataType, 'clear_Cache')
+    munlock; %unlock the function so the cache can be cleared
+    clear get_Data %clear the cache
+   
+    if(exist('C:\matlabR12\work\temp') == 7)
+            %save the current directory in preperation for restore
+            cur_Dir = cd;
+            
+            %change the current directory to the temporary directory
+            cd('C:\matlabR12\work\temp');
+            
+            % delete the session file
+            sessionName = strcat('cached_Data_',num2str(inputData(1)),'.mat');
+            
+            if(exist(sessionName,'file')) %checks if the file exists
+                evalStr = strcat('delete cached_Data_',num2str(inputData(1)),'.mat');
+                eval([evalStr]);%deletes the file
+            end
+            %restore the current directory
+            cd(cur_Dir);
+        end
+   
+    data = 'Cache cleared sucessfully';
+    %data = settings(1,1, 'clear');    %clear the settings
+    return
+end
+
+%Save the Cached Data to file
+if strcmp(dataType, 'save_Session')
+    
+%we are going to save the current session in the temporary directory C:\matlabR12\work\temp
+    %save the current directory in preperation for restore
+    cur_Dir = cd;
+    %if the temporary directory doenst exist create the directory
+    if(~(exist('C:\matlabR12\work\temp') == 7))
+        mkdir('C:\matlabR12\work','temp');
+    end
+    %change the current directory to the temporary directory
+    cd('C:\matlabR12\work\temp');
+    %save the cached data to the temp directory.
+    evalStr = strcat('save cached_Data_',num2str(inputData(1)));
+    eval([evalStr]);
+    %restore the current directory
+    cd(cur_Dir);
+   return
+end
+
+%load the cached data from file
+if strcmp(dataType, 'load_Session')
+   munlock; %unlock the function so the cache can be cleared
+   clear get_Data %clear the cache
+   sessionName = strcat('cached_Data_',num2str(inputData(1)),'.mat');
+   
+  
+       
+   %if the temporary directory exists set the current directory to the temporary directory
+   if(exist('C:\matlabR12\work\temp') == 7)
+       %save the current directory in preperation for restore
+       cur_Dir = cd;
+       
+       %change the current directory to the temporary directory
+       cd('C:\matlabR12\work\temp');
+       
+       if(exist(sessionName,'file')) %checks if the file exists
+           
+           % Read data from file 
+           evalStr = strcat('load cached_Data_',num2str(inputData(1)));
+           eval([evalStr]);
+       else
+           disp(strcat('Could not load session file # ',num2str(inputData(1))));
+       end
+       %restore the current directory
+       cd(cur_Dir);
+   else
+       disp(strcat('Could not load session file # ',num2str(inputData(1))));
+   end
+   
+   
+   inti = 1;
+   mlock;  %Ensure the cache isnt cleared
+   return
+end
+
+a = size(inputData);
+
+if(a(2) == 1) % assume that we have a studySessionID
+    if(strcmp(class(inputData),'double'))
+        studySessionID = inputData;
+    elseif(strcmp(class(inputData),'char'))
+        studySessionID = inputData;
+    else
+        data = 'Invalid inputData'
+        return 
+    end
+    
+else
+    if(strcmp(class(inputData),'double'))
+        studySessionID = inputData;
+    else
+        studySessionID = get_Session_Fromw_CellArray(inputData);
+    end
+end
+
+if(is_Cached_Data(dataType))
+    
+    %ensure that all the patients are in the db before we get their data
+    sessions_In_DB = get_Data(studySessionID,'MaxCycle');
+    
+    %determine any data not in the cache
+    if(strcmp(sessions_In_DB,'No Data'))
+        sessions_To_Add_To_Cache = 0;
+    else
+        sessions_In_DB = sessions_In_DB(:,1);
+        
+        %Clear any expired data from the cache
+        evalStr = strcat('[cached_', dataType, ' cached_', dataType, '_Index] = remove_Expired_Data(cached_', dataType, ',cached_', dataType, '_Index);');
+        eval([evalStr]);
+        
+        %Determine if we need to get the data from the DB or the cache
+        evalStr = strcat('current_Cached_Index = cached_', dataType, '_Index;');
+        eval([evalStr]); 
+        
+        sessions_To_Add_To_Cache = find_cache_Index( sessions_In_DB, current_Cached_Index );
+        
+        if(sessions_To_Add_To_Cache(1) ~= 0)
+            %make sure that the studySessionID's are in assending order
+            sessions_To_Add_To_Cache = sort(sessions_To_Add_To_Cache);
+            %only get data that isnt in the cache from the database
+            [data index] = get_Data_From_DB(sessions_To_Add_To_Cache, dataType);
+            
+            %add the data to the cache
+            evalStr = strcat('[cached_', dataType, ' cached_', dataType, '_Index] = update_Cache(cached_', dataType, ',cached_', dataType, '_Index, data, index);');
+            eval([evalStr]); 
+        end
+        
+        sessions_In_DB = sessions_In_DB(1); %We dont return multiple studies (only return back the first study from the original list
+        
+        %get the study from the cache
+        evalStr = strcat('data = get_Cached_Data(', num2str(sessions_In_DB), ', cached_', dataType, ',cached_', dataType, '_Index);');
+        eval([evalStr]); 
+    end
+    
+    
+else
+    
+    %get data from the DB
+    [data index] = get_Data_From_DB(studySessionID(1), dataType);
+    clear index %discard the index as it is not needed
+end
+
+warning on; %turn on all warnings
+lastNow = now;
+
+timeDiff = lastNow - firstNow;
+%pass = write_Stats_To_File(studySessionID, dataType, timeDiff);
+
+return
